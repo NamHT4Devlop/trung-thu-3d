@@ -220,7 +220,11 @@
   controls.minPolarAngle = 0.5; controls.maxPolarAngle = 1.75;
   controls.autoRotate = !reduceMotion; controls.autoRotateSpeed = 0.35;
 
-  const composer = new THREE.EffectComposer(renderer);
+  // render through a multisampled target: without it the composer drops antialiasing and thin roots,
+  // cords, leaves and fairy lights shimmer from frame to frame (amplified by the bloom)
+  const composer = new THREE.EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth * DPR, innerHeight * DPR,
+    { samples: renderer.capabilities.isWebGL2 ? 4 : 0 }));
+  composer.setSize(innerWidth, innerHeight);
   composer.addPass(new THREE.RenderPass(scene, camera));
   const bloom = new THREE.UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 1.0, 0.6, 0.82);
   bloom.highPassUniforms.smoothWidth.value = .25; // soft knee: glow fades in instead of flickering on/off
@@ -408,7 +412,7 @@
   }
   const toonRamp = (() => {
     const t = new THREE.DataTexture(new Uint8Array([80, 150, 210, 255]), 4, 1, THREE.RedFormat);
-    t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t;
+    t.minFilter = t.magFilter = THREE.LinearFilter; // soft toon bands: no popping as the bunnies move t.needsUpdate = true; return t;
   })();
   function barkTexture() {
     const c = document.createElement('canvas'); c.width = 256; c.height = 128;
@@ -589,7 +593,7 @@
       const pivot = new THREE.Group(); pivot.position.copy(p);
       const len = rand(.7, 2), s = rand(.55, .8), L = makeHoiAn(hoiAnColors[i % hoiAnColors.length], s);
       L.position.y = -len - .62 * s; pivot.add(L);
-      const cord = new THREE.Mesh(new THREE.CylinderGeometry(.01, .01, len, 4), cordMat); cord.position.y = -len / 2; pivot.add(cord);
+      const cord = new THREE.Mesh(new THREE.CylinderGeometry(.018, .018, len, 5), cordMat); cord.position.y = -len / 2; pivot.add(cord);
       pivot.userData.phase = Math.random() * 6.28; tree.add(pivot); swingers.push(pivot);
     }
   })();
